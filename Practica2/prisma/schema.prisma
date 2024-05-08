@@ -1,0 +1,35 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
+}
+model Serie {
+  id            Int          @id @default(autoincrement())
+  nombre        String
+  clasificacion String
+  asignaciones  Asignacion[]
+}
+
+model Personaje {
+  id                Int          @id @default(autoincrement())
+  nombre            String
+  anosExperiencia   Int
+  asignaciones      Asignacion[]
+}
+
+model Asignacion {
+  id            Int      @id @default(autoincrement())
+  serieId       Int
+  personajeId   Int
+  papel         String
+  tipoPapel     String
+  fechaInicio   DateTime
+  fechaFin      DateTime
+  temporadas    Int
+  estado        Boolean  @default(true)
+  serie         Serie    @relation(fields: [serieId], references: [id])
+  personaje     Personaje @relation(fields: [personajeId], references: [id])
+}
