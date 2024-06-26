@@ -1,0 +1,104 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type Personaje {
+  id: Int!
+  nombre: String!
+  anosExperiencia: Int!
+  estado: String!
+}
+
+type Serie {
+  id: Int!
+  nombre: String!
+  clasificacion: String!
+  estado: String!
+}
+
+type Asignacion {
+  id: Int!
+  serieId: Int!
+  personajeId: Int!
+  papel: String!
+  tipoPapel: String!
+  fechaInicio: DateTime!
+  fechaFin: DateTime!
+  temporadas: Int!
+  estado: String!
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+type Query {
+  asignaciones(estado: String): [Asignacion!]!
+  asignacion(id: Int!): Asignacion!
+  personajes(estado: String): [Personaje!]!
+  personaje(id: Int!): Personaje!
+  series(estado: String): [Serie!]!
+  serie(id: Int!): Serie!
+}
+
+type Mutation {
+  createAsignacion(createAsignacionInput: CreateAsignacionInput!): Asignacion!
+  updateAsignacion(updateAsignacionInput: UpdateAsignacionInput!): Asignacion!
+  removeAsignacion(id: Int!): Boolean!
+  createPersonaje(createPersonajeInput: CreatePersonajeInput!): Personaje!
+  updatePersonaje(updatePersonajeInput: UpdatePersonajeInput!): Personaje!
+  removePersonaje(id: Int!): Boolean!
+  createSerie(createSerieInput: CreateSerieInput!): Serie!
+  updateSerie(updateSerieInput: UpdateSerieInput!): Serie!
+  removeSerie(id: Int!): Boolean!
+}
+
+input CreateAsignacionInput {
+  serieId: Int!
+  personajeId: Int!
+  papel: String!
+  tipoPapel: String!
+  fechaInicio: DateTime!
+  fechaFin: DateTime!
+  temporadas: Int!
+  estado: String = "Activo"
+}
+
+input UpdateAsignacionInput {
+  serieId: Int
+  personajeId: Int
+  papel: String
+  tipoPapel: String
+  fechaInicio: DateTime
+  fechaFin: DateTime
+  temporadas: Int
+  estado: String = "Activo"
+  id: Int!
+}
+
+input CreatePersonajeInput {
+  nombre: String!
+  anosExperiencia: Int!
+  estado: String = "Activo"
+}
+
+input UpdatePersonajeInput {
+  nombre: String
+  anosExperiencia: Int
+  estado: String = "Activo"
+  id: Int!
+}
+
+input CreateSerieInput {
+  nombre: String!
+  clasificacion: String!
+  estado: String = "Activo"
+}
+
+input UpdateSerieInput {
+  nombre: String
+  clasificacion: String
+  estado: String = "Activo"
+  id: Int!
+}
