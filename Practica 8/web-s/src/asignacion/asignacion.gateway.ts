@@ -1,61 +1,118 @@
-import { WebSocketGateway, SubscribeMessage, MessageBody, WebSocketServer, ConnectedSocket } from '@nestjs/websockets';
-import { Server, Socket } from 'socket.io';
+import { WebSocketGateway, SubscribeMessage, MessageBody, OnGatewayConnection, OnGatewayDisconnect, WebSocketServer } from '@nestjs/websockets';
 import { AsignacionService } from './asignacion.service';
 import { CreateAsignacionDto } from './dto/create-asignacion.dto';
-import { UseGuards } from '@nestjs/common';
-import { WsAuthGuard } from 'src/auth/ws-auth.guard';
+import { UpdateAsignacionDto } from './dto/update-asignacion.dto';
+import { Server, Socket } from 'socket.io';
 
-@WebSocketGateway({cors:true})
-export class AsignacionGateway {
-  @WebSocketServer() wss: Server;
-  private userConnections: Map<string, Set<string>> = new Map();
+@WebSocketGateway({
+  cors: {
+    origin: '*',
+  },
+})
+export class AsignacionGateway implements OnGatewayConnection, OnGatewayDisconnect {
+  @WebSocketServer()
+  wss: Server;
+
+  private userConnections: { [userId: string]: Set<string> } = {}; // Objeto para rastrear conexiones de usuarios
 
   constructor(private readonly asignacionService: AsignacionService) {}
 
-  @UseGuards(WsAuthGuard)
   handleConnection(client: Socket) {
-    const userId = client.handshake.headers.userId as string;
-    if (!this.userConnections.has(userId)) {
-      this.userConnections.set(userId, new Set());
+    console.log(`Client connected: ${client.id}`);
+    
+    const userId = client.id; // Simulación de un identificador único
+
+    // Verificamos si el usuario ya tiene 3 conexiones abiertas
+    if (this.userConnections[userId] && this.userConnections[userId].size >= 3) {
+      client.disconnect(); // Desconectamos al cliente si ya alcanzó el límite
+      return;
     }
-    const connections = this.userConnections.get(userId);
-    if (connections.size >= 3) {
-      client.disconnect();
-      return false;
+
+    // Agregamos la nueva conexión al conjunto de conexiones del usuario
+    if (!this.userConnections[userId]) {
+      this.userConnections[userId] = new Set();
     }
-    connections.add(client.id);
-    return true;
+    this.userConnections[userId].add(client.id);
+
+    console.log(`User ${userId} connected: ${client.id}`);
   }
 
   handleDisconnect(client: Socket) {
-    const userId = client.handshake.headers.userId as string;
-    const connections = this.userConnections.get(userId);
-    if (connections) {
-      connections.delete(client.id);
-      if (connections.size === 0) {
-        this.userConnections.delete(userId);
+    console.log(`Client disconnected: ${client.id}`);
+
+    // Obtenemos el userId asociado a este socket
+    const userId = client.id; // Simulación de recuperación del userId
+
+    // Removemos la conexión del usuario
+    if (this.userConnections[userId]) {
+      this.userConnections[userId].delete(client.id);
+      if (this.userConnections[userId].size === 0) {
+        delete this.userConnections[userId];
       }
     }
+
+    console.log(`User ${userId} disconnected: ${client.id}`);
+  }
+  @SubscribeMessage('agregar-transaccion')
+  handleTransaction(@MessageBody() createAsignacionDto: CreateAsignacionDto) {
+    console.log('Received agregar-transaccion event', createAsignacionDto);
+    const inserted = this.asignacionService.create(createAsignacionDto);
+    console.log('Created asignacion:', inserted);
+    this.wss.emit('newAsignacion', inserted);
+    return inserted;
   }
 
-  @SubscribeMessage('agregar-transaccion')
-  async handleAgregarTransaccion(@MessageBody() data: CreateAsignacionDto, @ConnectedSocket() client: Socket) {
-    const nuevaAsignacion = await this.asignacionService.create(data);
-    this.wss.emit('nueva-transaccion', nuevaAsignacion);
+  @SubscribeMessage('findAllAsignacion')
+  findAll() {
+    console.log('Received findAllAsignacion event');
+    const asignaciones = this.asignacionService.findAll();
+    console.log('Emitting allAsignaciones event', asignaciones);
+    this.wss.emit('allAsignaciones', asignaciones);
+    return asignaciones;
+  }
 
-    // Usar client para enviar confirmación de recepción al cliente que envió el mensaje
-    client.emit('transaccion-recibida', { status: 'success', data: nuevaAsignacion });
+  @SubscribeMessage('findOneAsignacion')
+  findOne(@MessageBody() id: number) {
+    console.log('Received findOneAsignacion event', id);
+    const asignacion = this.asignacionService.findOne(id);
+    console.log('Emitting oneAsignacion event', asignacion);
+    this.wss.emit('oneAsignacion', asignacion);
+    return asignacion;
+  }
 
-    return nuevaAsignacion;
+  @SubscribeMessage('updateAsignacion')
+  update(@MessageBody() updateAsignacionDto: UpdateAsignacionDto) {
+    console.log('Received updateAsignacion event', updateAsignacionDto);
+    const updated = this.asignacionService.update(updateAsignacionDto.id, updateAsignacionDto);
+    console.log('Emitting updatedAsignacion event', updated);
+    this.wss.emit('updatedAsignacion', updated);
+    return updated;
+  }
+
+  @SubscribeMessage('removeAsignacion')
+  remove(@MessageBody() id: number) {
+    console.log('Received removeAsignacion event', id);
+    const removed = this.asignacionService.remove(id);
+    console.log('Emitting removedAsignacion event', removed);
+    this.wss.emit('removedAsignacion', removed);
+    return removed;
   }
 
   @SubscribeMessage('consultar-activos')
-  async handleConsultarActivos(@ConnectedSocket() client: Socket) {
-    const asignacionesActivas = await this.asignacionService.findAll('Activo');
-
-    // Enviar la lista de transacciones activas al cliente que consultó
-    client.emit('lista-transacciones', asignacionesActivas);
-
-    return asignacionesActivas;
+  findAllActivos() {
+    console.log('Received consultar-activos event');
+    const asignaciones = this.asignacionService.findAll();
+    const activos = asignaciones.filter(asignacion => asignacion.estado === 'Activo');
+    console.log('Emitting asignacionesActivas event', activos);
+    this.wss.emit('asignacionesActivas', activos);
+    return activos;
   }
 }
+
+
+
+
+
+
+
+

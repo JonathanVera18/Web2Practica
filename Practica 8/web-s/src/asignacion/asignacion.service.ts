@@ -1,49 +1,68 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Asignacion } from './entities/asignacion.entity';
+import { Injectable } from '@nestjs/common';
 import { CreateAsignacionDto } from './dto/create-asignacion.dto';
+import { UpdateAsignacionDto } from './dto/update-asignacion.dto';
+import { Asignacion } from './entities/asignacion.entity';
+
+const asignaciones: Asignacion[] = [
+  {
+    id: 1,
+    serieId: 1,
+    personajeId: 1,
+    papel: 'Protagonista',
+    tipoPapel: 'Principal',
+    fechaInicio: new Date('2023-01-01'),
+    fechaFin: new Date('2023-12-31'),
+    temporadas: 1,
+    estado: 'Activo'
+  },
+  {
+    id: 2,
+    serieId: 1,
+    personajeId: 2,
+    papel: 'Antagonista',
+    tipoPapel: 'Principal',
+    fechaInicio: new Date('2023-01-01'),
+    fechaFin: new Date('2023-12-31'),
+    temporadas: 1,
+    estado: 'Activo'
+  }
+];
 
 @Injectable()
 export class AsignacionService {
-  constructor(
-    @InjectRepository(Asignacion)
-    private readonly asignacionRepository: Repository<Asignacion>,
-  ) {}
-
-  async create(createAsignacionDto: CreateAsignacionDto): Promise<Asignacion> {
-    const asignacion = this.asignacionRepository.create(createAsignacionDto);
-    return this.asignacionRepository.save(asignacion);
+  create(createAsignacionDto: CreateAsignacionDto) {
+    const newAsignacion = {
+      id: asignaciones.length + 1,
+      ...createAsignacionDto,
+      estado: createAsignacionDto.estado || 'Activo'
+    };
+    asignaciones.push(newAsignacion);
+    return newAsignacion;
   }
 
-  async findAll(estado?: string): Promise<Asignacion[]> {
-    if (estado) {
-      return this.asignacionRepository.find({ where: { estado } });
+  findAll() {
+    return asignaciones;
+  }
+
+  findOne(id: number) {
+    return asignaciones.find(asignacion => asignacion.id === id);
+  }
+
+  update(id: number, updateAsignacionDto: UpdateAsignacionDto) {
+    const index = asignaciones.findIndex(asignacion => asignacion.id === id);
+    if (index !== -1) {
+      asignaciones[index] = { ...asignaciones[index], ...updateAsignacionDto };
+      return asignaciones[index];
     }
-    return this.asignacionRepository.find();
+    return null;
   }
 
-  async findOne(id: number): Promise<Asignacion> {
-    const asignacion = await this.asignacionRepository.findOne({ where: { id } });
-    if (!asignacion) {
-      throw new NotFoundException(`Asignacion with ID ${id} not found`);
+  remove(id: number) {
+    const index = asignaciones.findIndex(asignacion => asignacion.id === id);
+    if (index !== -1) {
+      asignaciones[index].estado = 'Inactivo';
+      return asignaciones[index];
     }
-    return asignacion;
-  }
-
-  async update(id: number, updateAsignacionDto: any): Promise<Asignacion> {
-    const asignacion = await this.asignacionRepository.preload({
-      id,
-      ...updateAsignacionDto,
-    });
-    if (!asignacion) {
-      throw new NotFoundException(`Asignacion with ID ${id} not found`);
-    }
-    return this.asignacionRepository.save(asignacion);
-  }
-
-  async remove(id: number): Promise<void> {
-    const asignacion = await this.findOne(id);
-    await this.asignacionRepository.remove(asignacion);
+    return null;
   }
 }

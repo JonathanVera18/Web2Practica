@@ -1,6 +1,5 @@
-import { Personaje } from 'src/personaje/entities/personaje.entity';
-import { Serie } from 'src/serie/entities/serie.entity';
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
+
+import { Entity, PrimaryGeneratedColumn, Column} from 'typeorm';
 
 @Entity({ name: 'Asignacion' })
 export class Asignacion {
@@ -31,11 +30,4 @@ export class Asignacion {
   @Column({ default: 'Activo' })
   estado: string;
 
-  @ManyToOne(() => Serie, (serie) => serie.asignaciones)
-  @JoinColumn({ name: 'serieId' })
-  serie: Serie;
-
-  @ManyToOne(() => Personaje, (personaje) => personaje.asignaciones)
-  @JoinColumn({ name: 'personajeId' })
-  personaje: Personaje;
 }
